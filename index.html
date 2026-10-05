@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ADIE Certificate Verifier — Offline</title>
+<style>
+  body { font-family: system-ui, -apple-system, sans-serif; max-width: 720px;
+         margin: 40px auto; padding: 20px; background: #0b0f19; color: #f9fafb; }
+  h1 { font-size: 22px; margin-bottom: 8px; }
+  .sub { color: #9ca3af; font-size: 13px; margin-bottom: 30px; }
+  .warn { background: #78350f; padding: 12px; border-radius: 6px;
+          font-size: 13px; margin-bottom: 20px; display: none; }
+  .warn.show { display: block; }
+  .row { margin-bottom: 16px; }
+  label { display: block; font-size: 13px; margin-bottom: 6px; color: #cbd5e1; }
+  input[type=file] { color: #e2e8f0; font-size: 13px; }
+  .ok { color: #10b981; font-size: 12px; margin-top: 4px; }
+  button { background: #3b82f6; color: #fff; border: 0; padding: 12px 24px;
+           border-radius: 6px; font-size: 14px; font-weight: 600;
+           cursor: pointer; margin-top: 12px; }
+  button:disabled { background: #1f2937; color: #6b7280; cursor: not-allowed; }
+  pre { background: #111827; padding: 16px; border-radius: 6px;
+        white-space: pre-wrap; word-break: break-word; font-size: 12px;
+        line-height: 1.5; margin-top: 20px; }
+  .valid { border-left: 4px solid #10b981; }
+  .invalid { border-left: 4px solid #ef4444; }
+  .diag { background: #0f172a; padding: 12px; border-radius: 6px;
+          font-size: 11px; color: #64748b; margin-top: 12px; }
+</style>
+</head>
+<body>
+<h1>ADIE Decision Certificate Verifier</h1>
+<p class="sub">Fully offline. No network. No external dependencies.</p>
+
+<div id="browser-warn" class="warn">
+  ⚠️ Web Crypto is not available. Open this file over HTTPS or localhost.
+</div>
+
+<div class="row">
+  <label>1. Certificate file (certificate-001.json)</label>
+  <input type="file" id="cert-file" accept=".json">
+  <div id="cert-ok" class="ok"></div>
+</div>
+
+<div class="row">
+  <label>2. Public key file (public-key-001.pem)</label>
+  <input type="file" id="key-file" accept=".pem,.txt">
+  <div id="key-ok" class="ok"></div>
+</div>
+
+<button id="verify-btn" disabled>Verify Certificate</button>
+
+<pre id="output"></pre>
+
+<script>
+'use strict';
+
+// ============================================================
+// RFC 8785 JCS — recursive canonicalization (pure JS)
+// ============================================================
+
+function jcsCanonicalize(value) {
+  return jcsValue(value);
+}
+
+function jcsValue(v) {
+  if (v === null) return 'null';
+  if (v === true) return 'true';
+  if (v === false) return 'false';
+  if (typeof v === 'number') return jcsNumber(v);
+  if (typeof v === 'string') return jcsString(v);
+  if (Array.isArray(v)) return jcsArray(v);
+  if (typeof v === 'object') return jcsObject(v);
+  throw new Error('JCS: unsupported type ' + typeof v);
+}
+
+function jcsNumber(n) {
+  if (!isFinite(n)) throw new Error('JCS: non-finite number');
+  if (Object.is(n, -0)) return '0';
+  // ECMAScript Number::toString — matches RFC 8785
+  return n.toString();
+}
+
+function jcsString(s) {
+  let out = '"';
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c === 0x22) out += '\\"';
+    else if (c === 0x5c) out += '\\\\';
+    else if (c === 0x08) out += '\\b';
+    else if (c === 0x09) out += '\\t';
+    else if (c === 0x0a) out += '\\n';
+    else if (c === 0x0c) out += '\\f';
+    else if (c === 0x0d) out += '\\r';
+    else if (c < 0x20) out += '\\u' + c.toString(16).padStart(4, '0');
+    else out += s[i];
+  }
+  return out + '"';
+}
+
+function jcsArray(a) {
+  const parts = [];
+  for (let i = 0; i < a.length; i++) parts.push(jcsValue(a[i]));
+  return '[' + parts.join(',') + ']';
+}
+
+function jcsObject(o) {
+  const keys = Object.keys(o).sort(utf16Compare);
+  const parts = [];
+  for (const k of keys) parts.push(jcsString(k) + ':' + jcsValue(o[k]));
+  return '{' + parts.join(',') + '}';
+}
+
+function utf16Compare(a, b) {
+  const n = Math.min(a.length, b.length);
+  for (let i = 0; i < n; i++) {
+    const ca = a.charCodeAt(i), cb = b.charCodeAt(i);
+    if (ca !== cb) return ca - cb;
+  }
+  return a.length - b.length;
+}
+
+// ============================================================
+// Encoding helpers
+// ============================================================
+
+function toHex(bytes) {
+  let out = '';
+  for (let i = 0; i < bytes.length; i++) {
+    out += bytes[i].toString(16).padStart(2, '0');
+  }
+  return out;
+}
+
+function fromHex(hex) {
+  if (hex.length % 2 !== 0) throw new Error('odd hex length');
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+  }
+  return bytes;
+}
+
+// ============================================================
+// Crypto via Web Crypto API (native, offline, zero-dep)
+// ============================================================
+
+async function sha256(bytes) {
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return new Uint8Array(digest);
+}
+
+async function rfc6962Root(leaves) {
+  if (leaves.length === 0) {
+    return await sha256(new Uint8Array(0));
+  }
+  if (leaves.length === 1) {
+    const buf = new Uint8Array(1 + leaves[0].length);
+    buf[0] = 0x00;
+    buf.set(leaves[0], 1);
+    return await sha256(buf);
+  }
+  let k = 1;
+  while (k * 2 < leaves.length) k *= 2;
+  const left = await rfc6962Root(leaves.slice(0, k));
+  const right = await rfc6962Root(leaves.slice(k));
+  const buf = new Uint8Array(1 + left.length + right.length);
+  buf[0] = 0x01;
+  buf.set(left, 1);
+  buf.set(right, 1 + left.length);
+  return await sha256(buf);
+}
+
+async function rsaVerify(payloadBytes, signatureBytes, pemText) {
+  const pemBody = pemText
+    .replace(/-----BEGIN PUBLIC KEY-----/g, '')
+    .replace(/-----END PUBLIC KEY-----/g, '')
+    .replace(/\s+/g, '');
+  const derBytes = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey(
+    'spki',
+    derBytes,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['verify']
+  );
+  return await crypto.subtle.verify(
+    'RSASSA-PKCS1-v1_5',
+    key,
+    signatureBytes,
+    payloadBytes
+  );
+}
+
+// ============================================================
+// Error codes (E001-E010)
+// ============================================================
+
+const E001 = 'E001_SIGNATURE_INVALID';
+const E002 = 'E002_HASH_MISMATCH';
+const E003 = 'E003_SCHEMA_VIOLATION';
+const E004 = 'E004_JCS_MISMATCH';
+const E005 = 'E005_ALG_UNSUPPORTED';
+const E006 = 'E006_TIMESTAMP_INVALID';
+const E007 = 'E007_VERSION_MISMATCH';
+const E009 = 'E009_UNICODE_INVALID';
+
+function fail(code, detail) {
+  throw { code, detail: detail || '' };
+}
+
+// ============================================================
+// Verification
+// ============================================================
+
+async function verifyCertificate(cert, pem) {
+  const TS_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+
+  // 1. Schema
+  for (const f of ['protocol', 'decision_contract', 'integrity', 'issuer', 'issued_at', 'signature']) {
+    if (!(f in cert)) fail(E003, 'missing: ' + f);
+  }
+  const proto = cert.protocol;
+  if (proto.name !== 'ADIE' || proto.version !== '1.0') {
+    fail(E007, proto.name + ' v' + proto.version);
+  }
+  if (cert.signature.algorithm !== 'RSA-2048-PKCS1v15-SHA256') {
+    fail(E005, 'sig alg: ' + cert.signature.algorithm);
+  }
+  if (cert.integrity.algorithm !== 'RFC6962-SHA256') {
+    fail(E005, 'fp alg: ' + cert.integrity.algorithm);
+  }
+  if (!TS_RE.test(cert.issued_at)) {
+    fail(E006, cert.issued_at);
+  }
+
+  // 2. Content hash (JCS + SHA-256)
+  let canonical;
+  try {
+    canonical = jcsCanonicalize(cert.decision_contract);
+  } catch (e) {
+    fail(E004, e.message);
+  }
+  const contentHash = 'sha256:' + toHex(await sha256(new TextEncoder().encode(canonical)));
+  if (contentHash !== cert.integrity.decision_contract_content_hash) {
+    fail(E002, 'content_hash');
+  }
+
+  // 3. Merkle root (RFC 6962) + fingerprint
+  const ev = cert.integrity.referenced_event_hashes || [];
+  const evd = cert.integrity.referenced_evidence_hashes || [];
+  const leaves = [];
+  for (const h of ev.concat(evd)) {
+    if (typeof h !== 'string' || !h.startsWith('sha256:') || h.length !== 71) {
+      fail(E003, 'bad hash: ' + h);
+    }
+    try {
+      leaves.push(fromHex(h.slice(7)));
+    } catch (e) {
+      fail(E003, 'bad hex: ' + h);
+    }
+  }
+  leaves.push(fromHex(contentHash.slice(7)));
+  const root = await rfc6962Root(leaves);
+  const prefix = new TextEncoder().encode('ADIE:EMISSION:v1:');
+  const fpInput = new Uint8Array(prefix.length + root.length);
+  fpInput.set(prefix, 0);
+  fpInput.set(root, prefix.length);
+  const fingerprint = 'sha256:' + toHex(await sha256(fpInput));
+  if (fingerprint !== cert.integrity.emission_fingerprint) {
+    fail(E002, 'emission_fingerprint');
+  }
+
+  // 4. Payload + RSA verify
+  const payload = jcsCanonicalize({
+    decision_contract_content_hash: contentHash,
+    emission_fingerprint: fingerprint,
+    issued_at: cert.issued_at,
+    issuer: cert.issuer,
+    protocol_version: proto.version,
+  });
+  const payloadBytes = new TextEncoder().encode(payload);
+  let sigBytes;
+  try {
+    sigBytes = fromHex(cert.signature.value);
+  } catch (e) {
+    fail(E001, 'bad sig hex');
+  }
+  const ok = await rsaVerify(payloadBytes, sigBytes, pem);
+  if (!ok) fail(E001, 'signature mismatch');
+
+  return {
+    contentHash,
+    fingerprint,
+    issuer: cert.issuer.identity,
+    decisionId: cert.decision_contract.decision_id,
+  };
+}
+
+// ============================================================
+// UI wiring
+// ============================================================
+
+let certData = null;
+let pemData = null;
+const out = document.getElementById('output');
+const btn = document.getElementById('verify-btn');
+
+if (!window.crypto || !window.crypto.subtle) {
+  document.getElementById('browser-warn').classList.add('show');
+  btn.disabled = true;
+}
+
+document.getElementById('cert-file').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const text = await f.text();
+  try {
+    certData = JSON.parse(text);
+    document.getElementById('cert-ok').textContent = '✓ loaded: ' + f.name;
+  } catch (err) {
+    document.getElementById('cert-ok').textContent = '✗ JSON parse error';
+    certData = null;
+  }
+  checkReady();
+});
+
+document.getElementById('key-file').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  pemData = await f.text();
+  document.getElementById('key-ok').textContent = '✓ loaded: ' + f.name;
+  checkReady();
+});
+
+function checkReady() {
+  btn.disabled = !(certData && pemData);
+}
+
+btn.addEventListener('click', async () => {
+  out.className = '';
+  out.textContent = 'Verifying...';
+  try {
+    const r = await verifyCertificate(certData, pemData);
+    out.className = 'valid';
+    out.textContent = '✓ VALID\n\n' +
+      'Decision ID: ' + r.decisionId + '\n' +
+      'Issuer: ' + r.issuer + '\n' +
+      'Content Hash: ' + r.contentHash + '\n' +
+      'Fingerprint: ' + r.fingerprint + '\n\n' +
+      'The certificate integrity is confirmed.\n' +
+      'This proves the artifact has not been altered.\n' +
+      'It does NOT prove the decision was correct.';
+  } catch (err) {
+    out.className = 'invalid';
+    out.textContent = '✗ INVALID: ' + (err.code || 'E000_UNKNOWN') + '\n\n' +
+      (err.detail ? 'Detail: ' + err.detail : '');
+  }
+});
+</script>
+</body>
+</html>

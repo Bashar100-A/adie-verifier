@@ -1,0 +1,46 @@
+{
+  "protocol": {
+    "name": "ADIE",
+    "version": "1.0",
+    "profile": "DCP-Profile-1"
+  },
+  "decision_contract": {
+    "decision_id": "dec-TAMPERED",
+    "evaluation_id": "eval-poc-001",
+    "policy_id": "credit-risk-policy-v3",
+    "action": "reject_request",
+    "status": "authorized",
+    "authorized": true,
+    "created_at": "2026-04-15T14:23:11Z",
+    "expires_at": "2026-04-15T14:28:11Z",
+    "target_resource_id": "loan-application-L-2026-0429",
+    "parameters": {
+      "model": "credit-scoring-v3.2"
+    },
+    "execution_obligation": "NONE"
+  },
+  "integrity": {
+    "algorithm": "RFC6962-SHA256",
+    "decision_contract_content_hash": "sha256:e751b66330bfdc8c298c360615785a2085c749db3f8abdd58be26b091aa0d051",
+    "referenced_event_hashes": [
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    ],
+    "referenced_evidence_hashes": [
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    ],
+    "emission_fingerprint": "sha256:6337c84bc1e8767b46a556900393d507ec11779e8ee72f8fffba1fa2ee5a1523"
+  },
+  "issuer": {
+    "identity": "adie-poc-001",
+    "key_id": "adie-poc-001"
+  },
+  "issued_at": "2026-04-15T14:23:11Z",
+  "signature": {
+    "algorithm": "RSA-2048-PKCS1v15-SHA256",
+    "key_id": "adie-poc-001",
+    "value": "28cb6c3ab60ef217e3607ec1e18f7c1cbead79d86ffafc28cb948c823cdf4e58d3c060d72c8ed331c89ccbc1475d63047f5c805a09d7d58ab9917c47e43a527db292e64b88555ca29e32cd988b0e60108f23a3133b293164dda3034547269aa66985a94f393f7ab00318345d47f0154d6cbbdb3a57285b2137838b3f92aafe2fa7663571da6eea3b8f9f4d3f12bba0d0173ca8f8210b79005a9a97a4d15167f758f607bfec40839b13df8b4206dcb89869e3b3a955bc4c7dbaf6649f5917af86b190f0972b8e77868138fa5d849ee6b98caac4b714fab846bf80d1ac38face65192339b025aa1865370f5658bef41ee59ee24d8a1c6b3ccb55f1b8afe42eb52e"
+  }
+}
