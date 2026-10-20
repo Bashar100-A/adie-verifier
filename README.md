@@ -95,7 +95,7 @@ from an unknown key is rejected outright.
 
 - **Signature:** Ed25519 over a payload `{claim_id, outcome, files[], run_id, signed_at}`
 - **Canonicalization:** RFC 8785 JCS (JSON Canonicalization Scheme)
-- **Hash:** SHA-256 per file, embedded as `files[].sha256`
+- **Hash:** SHA-256 per artifact, embedded in `artifacts[]`
 - **Public key:** embedded in `signature.public_key_pem` (self-verifying)
 - **Key id:** short identifier in `signature.key_id` (dev / prod distinction)
 - **Verification:** browser Web Crypto `crypto.subtle.verify('Ed25519', ...)`
