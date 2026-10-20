@@ -44,6 +44,19 @@ SIGNATURE_INVALID, CRYPTO_ERROR.
 
 Standards: RFC 8785, RFC 8032 (Ed25519), SHA-256.
 
+## Security regression tests
+
+The following manifests verify two primary attack scenarios:
+
+| File | Attack | Expected |
+|---|---|---|
+| `manifest-P12-TAMPERED.json` | Payload modified (outcome PASS->FAIL) | `INVALID: PAYLOAD_HASH_MISMATCH` |
+| `manifest-P12-ATTACKER-KEY.json` | Manifest substitution (forged key, same payload) | `INVALID: UNTRUSTED_KEY` |
+
+Both are rejected by v5. The pinning check (`TRUSTED_KEY_IDS`) fires
+before hash and signature verification, so a correctly-signed manifest
+from an unknown key is rejected outright.
+
 ## Security notes
 
 Warning - Trust model: Both verifiers display dev_mode: true as a warning only.
