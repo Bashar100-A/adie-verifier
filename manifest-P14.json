@@ -1,0 +1,36 @@
+{
+  "manifest_version": "1.0",
+  "run_id": "3853b7f5-67ad-4896-9476-d83e86fdd792",
+  "claim_id": "P14",
+  "started_at": "2026-10-20T07:18:30.200578+00:00",
+  "finished_at": "2026-10-20T07:24:04.302766+00:00",
+  "duration_seconds": 334.102,
+  "outcome": "PASS",
+  "environment": {
+    "python": "3.12.3",
+    "platform": "linux",
+    "runner": "tests/runners/python/p14_runner.py"
+  },
+  "summary": {
+    "total_vectors": 32,
+    "passed": 32,
+    "failed": 0
+  },
+  "artifacts": [
+    {
+      "path": "output/reports/p14/P14_GateReport_20261020T072404Z.json",
+      "sha256": "3dd15748cab0d4e4dd356b25870c2f4b007068adba6f92de6f94039fe74c1df8",
+      "role": "gate_report"
+    }
+  ],
+  "full_evidence": true,
+  "signature": {
+    "alg": "Ed25519",
+    "key_id": "28f7e99132838f7a",
+    "signed_payload_sha256": "2c1a016f99c392ae5c657fbb90aecf7d763e18dd9dd828baec73f839b295c18b",
+    "value": "16o5tPqbiXdkmvjcDusDsCRIpF2sboRYQsDh+EG/XEdbWGCwjBzBFBv2j/8hhR2J0OlcB5kztfXS/z+c7ueLAA==",
+    "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAte5ywFv1OXuUOFIzf4GbuuqMA6q7pZ3ERSCT1+olHJc=\n-----END PUBLIC KEY-----\n",
+    "signed_at": "2026-10-20T07:24:04.689846+00:00",
+    "dev_mode": true
+  }
+}

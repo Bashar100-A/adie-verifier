@@ -1,0 +1,36 @@
+{
+  "manifest_version": "1.0",
+  "run_id": "8648692c-5f49-4659-8faa-fc7ae5939df4",
+  "claim_id": "P12",
+  "started_at": "2026-10-19T20:44:50.185304+00:00",
+  "finished_at": "2026-10-19T20:44:51.242673+00:00",
+  "duration_seconds": 1.057,
+  "outcome": "FAIL",
+  "environment": {
+    "python": "3.12.3",
+    "platform": "linux",
+    "runner": "tests/runners/python/p12_runner.py"
+  },
+  "summary": {
+    "total_vectors": 13,
+    "passed": 13,
+    "failed": 0
+  },
+  "artifacts": [
+    {
+      "path": "output/reports/p12/P12_GateReport_interval.json",
+      "sha256": "69c1773d36582ed4fdebfc2a0950a134616e59bae89a163720af7216822bba86",
+      "role": "gate_report"
+    }
+  ],
+  "full_evidence": true,
+  "signature": {
+    "alg": "Ed25519",
+    "key_id": "28f7e99132838f7a",
+    "signed_payload_sha256": "ac18b555f4519c23675dcada818975d7619af01670893da2d706b7ceee6b3053",
+    "value": "ZCGl/ORYZCgpiPsUJ+3x/6HXUR3haMySBfkMQWCxeLNH0iJ1f818N78A2hbKw/eYT9I3jr/uzgaO2YPgkNkjBQ==",
+    "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAte5ywFv1OXuUOFIzf4GbuuqMA6q7pZ3ERSCT1+olHJc=\n-----END PUBLIC KEY-----\n",
+    "signed_at": "2026-10-19T20:44:51.609563+00:00",
+    "dev_mode": true
+  }
+}
