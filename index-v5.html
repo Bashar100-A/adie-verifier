@@ -61,6 +61,10 @@
   <button id="verify-btn" disabled>Verify manifest</button>
 </div>
 
+<div class="row">
+  <button id="reproduce-btn" disabled>Load all 3 manifests and verify</button>
+</div>
+
 <div id="output"></div>
 
 <div class="diag">
@@ -272,6 +276,51 @@ verifyBtn.addEventListener('click', async () => {
     browserWarn.textContent = 'Browser supports Ed25519 - ready to verify.';
   }
 })();
+const REPRO_FILES = [
+  { name: 'manifest-P12.json', claim: 'P12' },
+  { name: 'manifest-P13.json', claim: 'P13' },
+  { name: 'manifest-P14.json', claim: 'P14' }
+];
+(async () => {
+  const b = await checkBrowserSupport();
+  if (!b.ok) return;
+  const btn = document.getElementById('reproduce-btn');
+  if (!btn) return;
+  btn.disabled = false;
+  btn.addEventListener('click', async () => {
+    const out = document.getElementById('output');
+    out.innerHTML = '<pre class="pending">Loading 3 manifests...</pre>';
+    const res = [];
+    for (const f of REPRO_FILES) {
+      try {
+        const r = await fetch(f.name, { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const text = await r.text();
+        let v;
+        try { v = await verifyManifest(text); }
+        catch (e) { v = { ok: false, reason: 'CRYPTO_ERROR', detail: e.message }; }
+        let m = {}; try { m = JSON.parse(text); } catch (_) {}
+        res.push({ claim: m.claim_id || f.claim, name: f.name, ok: v.ok, reason: v.reason });
+      } catch (e) {
+        res.push({ claim: f.claim, name: f.name, ok: false, reason: 'FETCH_FAILED: ' + e.message });
+      }
+    }
+    const ok = res.filter(r => r.ok).length;
+    const cls = ok === 3 ? 'valid' : (ok > 0 ? 'pending' : 'invalid');
+    const rows = res.map(r =>
+      '<tr><td>' + r.claim + '</td><td>' + r.name + '</td>' +
+      '<td class="' + (r.ok ? 'ok' : 'bad') + '">' + (r.ok ? 'VALID' : 'INVALID') + '</td>' +
+      '<td><code>' + r.reason + '</code></td></tr>'
+    ).join('');
+    out.innerHTML =
+      '<pre class="' + cls + '">' + ok + '/' + res.length + ' valid</pre>' +
+      '<div class="diag"><table>' +
+      '<thead><tr><th>Claim</th><th>Manifest</th><th>Status</th><th>Reason</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table></div>' +
+      '<p class="diag">If fetch fails (file:// protocol), use Choose File above.</p>';
+  });
+})();
+
 </script>
 </body>
 </html>
