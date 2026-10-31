@@ -13,6 +13,10 @@
   Rat.parse = function (s) {
     if (typeof s !== 'string') s = String(s);
     s = s.trim();
+    if (s.length === 0) throw new Error('empty rational');
+    if (!/^-?[0-9]+(\.[0-9]+)?(\/-?[0-9]+)?$/.test(s)) {
+      throw new Error('malformed rational: ' + s);
+    }
     if (s.indexOf('/') !== -1) {
       var p = s.split('/'); return new Rat(BigInt(p[0]), BigInt(p[1]));
     }
