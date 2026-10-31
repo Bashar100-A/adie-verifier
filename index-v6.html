@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>ADIE Manifest Verifier v6 - Ed25519 / v2.0.0</title>
+<title>ADIE Manifest Verifier v6 - Ed25519 / v2.0.0 / witness</title>
 <style>
   body { font-family: system-ui, -apple-system, sans-serif; max-width: 820px;
          margin: 40px auto; padding: 20px; background: #0b0f19; color: #f9fafb; }
@@ -35,24 +35,17 @@
   .bad { color: #ef4444; }
   code { background: #1f2937; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
   ol li { margin: 4px 0; font-size: 12px; }
-  .bucket-h {
-    margin: 16px 0 8px;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-weight: 600;
-  }
-  .bucket-accept  { background: #e8f5e9; border-left: 4px solid #43a047; }
+
+  .bucket-h { margin: 16px 0 8px; padding: 8px 12px; border-radius: 4px; font-weight: 600; }
+  .bucket-accept { background: #e8f5e9; border-left: 4px solid #43a047; }
   .bucket-pregate { background: #f5f5f5; border-left: 4px solid #9e9e9e; }
-  .bucket-boundary{ background: #e3f2fd; border-left: 4px solid #1e88e5; }
+  .bucket-boundary { background: #e3f2fd; border-left: 4px solid #1e88e5; }
   .bucket-unknown { background: #fff8e1; border-left: 4px solid #ffb300; }
-  .bucket-fail    { background: #ffebee; border-left: 4px solid #e53935; }
+  .bucket-fail { background: #ffebee; border-left: 4px solid #e53935; }
   .artifact-row { padding: 6px 12px; font-family: monospace; font-size: 0.9em; }
-  .artifact-row.fail { color: #c62828; }
   .artifact-row.pass { color: #2e7d32; }
-  .summary-banner {
-    padding: 12px; margin: 12px 0; border-radius: 4px;
-    background: #fafafa; border: 1px solid #e0e0e0;
-  }
+  .artifact-row.fail { color: #c62828; }
+  .summary-banner { padding: 12px; margin: 12px 0; border-radius: 4px; background: #fafafa; border: 1px solid #e0e0e0; }
 </style>
 </head>
 <body>
@@ -83,18 +76,17 @@
   <button id="reproduce-btn" disabled>Load all 3 manifests and verify</button>
 </div>
 
-<div id="witness-section" style="display:none; margin-top:24px;">
-  <hr style="margin:24px 0; border:none; border-top:1px solid #ddd;">
+<div id="output"></div>
+
+<section id="v6-section" style="display:none; margin-top:24px; border-top:2px solid #ddd; padding-top:16px;">
   <h2 style="font-size:1.2em; margin-bottom:12px;">Witness evaluation (v6)</h2>
   <p style="color:#666; font-size:0.9em; margin-bottom:12px;">
-    Witness data is integrity-protected by the signature (JCS canonicalization).
-    Each ACCEPT witness is evaluated against its policy DSL in-browser.
-    Pre-gate and trusted-boundary cases are displayed, not evaluated.
+    Evaluates Z3 witnesses against their policy DSL, in-browser. No Z3, no WASM, no network.
+    Each ACCEPT witness is evaluated; pre-gate and trusted-boundary cases are displayed, not evaluated.
   </p>
-  <button id="evaluate-btn" type="button">Evaluate witnesses</button>
-  <div id="witness-output"></div>
-</div>
-<div id="output"></div>
+  <button id="v6-evaluate-btn" type="button" disabled>Evaluate witnesses</button>
+  <div id="v6-output"></div>
+</section>
 
 <div class="diag">
   <strong>Checks:</strong>
@@ -298,135 +290,7 @@ verifyBtn.addEventListener('click', async () => {
 });
 
 (async () => {
-  const b = await 
-// ---------- v6: witness evaluation handler ----------
-(function () {
-  var _lastVerifiedManifest = null;
-  var witnessSection = document.getElementById('witness-section');
-  var evaluateBtn = document.getElementById('evaluate-btn');
-  var witnessOutput = document.getElementById('witness-output');
-
-  // Hook: when verifyManifest returns pass, store the manifest and reveal section.
-  var _origVerifyManifest = verifyManifest;
-  window.verifyManifest = async function (text) {
-    var r = await _origVerifyManifest(text);
-    if (r && r.ok) {
-      try { _lastVerifiedManifest = JSON.parse(text); }
-      catch (e) { _lastVerifiedManifest = null; }
-      if (witnessSection) witnessSection.style.display = '';
-    } else {
-      _lastVerifiedManifest = null;
-      if (witnessSection) witnessSection.style.display = 'none';
-    }
-    return r;
-  };
-
-  // Also override the verify button handler to use window.verifyManifest.
-  // (v5's handler calls the local verifyManifest — since we replaced the global,
-  //  but v5's click listener may have captured the old binding. We rewire.)
-  if (verifyBtn) {
-    // Remove old listeners by cloning the node.
-    var newBtn = verifyBtn.cloneNode(true);
-    verifyBtn.parentNode.replaceChild(newBtn, verifyBtn);
-    newBtn.addEventListener('click', async function () {
-      var file = document.getElementById('file').files[0];
-      if (!file) return;
-      var text = await file.text();
-      var r = await window.verifyManifest(text);
-      var out = document.getElementById('output');
-      if (r.ok) {
-        out.innerHTML = '<div class="bucket-h bucket-accept">\u2705 VALID ' + escapeHtml(r.detail) + '</div>';
-      } else {
-        out.innerHTML = '<div class="bucket-h bucket-fail">\u274c ' + escapeHtml(r.reason) + ': ' + escapeHtml(r.detail) + '</div>';
-      }
-    });
-  }
-
-  if (evaluateBtn) {
-    evaluateBtn.addEventListener('click', function () {
-      if (!_lastVerifiedManifest) {
-        witnessOutput.innerHTML = '<div class="bucket-h bucket-fail">No verified manifest. Verify first.</div>';
-        return;
-      }
-      var artifacts = (_lastVerifiedManifest.artifacts || []).filter(function (a) {
-        return a.role === 'witness';
-      });
-      if (artifacts.length === 0) {
-        witnessOutput.innerHTML = '<div class="bucket-h bucket-unknown">No witness artifacts in this manifest.</div>';
-        return;
-      }
-      var results = artifacts.map(function (a) { return window.ADIE_EVAL.evaluateWitness(a); });
-      renderWitnessResults(witnessOutput, results);
-    });
-  }
-
-  function renderWitnessResults(container, results) {
-    var counts = { accept: 0, acceptPass: 0, acceptFail: 0, pregate: 0, boundary: 0, unknown: 0 };
-    results.forEach(function (r) {
-      counts[r.bucket] = (counts[r.bucket] || 0) + 1;
-      if (r.bucket === 'accept') {
-        if (r.match) counts.acceptPass++; else counts.acceptFail++;
-      }
-    });
-    var html = '<div class="summary-banner">';
-    html += '<strong>Summary:</strong> ';
-    html += '<span class="bucket-accept" style="padding:2px 6px;border-radius:3px;">' + counts.acceptPass + ' ACCEPT pass</span> ';
-    if (counts.acceptFail > 0) {
-      html += '<span class="bucket-fail" style="padding:2px 6px;border-radius:3px;">' + counts.acceptFail + ' ACCEPT FAIL</span> ';
-    }
-    html += '<span class="bucket-pregate" style="padding:2px 6px;border-radius:3px;">' + counts.pregate + ' pre-gate</span> ';
-    html += '<span class="bucket-boundary" style="padding:2px 6px;border-radius:3px;">' + counts.boundary + ' boundary</span>';
-    if (counts.unknown > 0) {
-      html += ' <span class="bucket-unknown" style="padding:2px 6px;border-radius:3px;">' + counts.unknown + ' unknown</span>';
-    }
-    html += '</div>';
-
-    var buckets = { accept: [], pregate: [], boundary: [], unknown: [] };
-    results.forEach(function (r) { buckets[r.bucket].push(r); });
-
-    if (buckets.accept.length) {
-      html += '<div class="bucket-h bucket-accept">ACCEPT (' + buckets.accept.length + ')</div>';
-      buckets.accept.forEach(function (r) {
-        var cls = r.match ? 'pass' : 'fail';
-        var icon = r.match ? '\u2705' : '\u274c';
-        html += '<div class="artifact-row ' + cls + '">' + icon + ' ' + escapeHtml(r.test_id) +
-                ' — derived=' + escapeHtml(String(r.derived)) +
-                ' expected=' + escapeHtml(r.expected) +
-                ' (' + escapeHtml(r.reason) + ')</div>';
-      });
-    }
-    if (buckets.pregate.length) {
-      html += '<div class="bucket-h bucket-pregate">Pre-gate rejections (' + buckets.pregate.length + ') — not evaluated</div>';
-      buckets.pregate.forEach(function (r) {
-        html += '<div class="artifact-row">\u25cb ' + escapeHtml(r.test_id) +
-                ' — ' + escapeHtml(r.reason) + '</div>';
-      });
-    }
-    if (buckets.boundary.length) {
-      html += '<div class="bucket-h bucket-boundary">Trusted boundary (' + buckets.boundary.length + ') — not evaluated</div>';
-      buckets.boundary.forEach(function (r) {
-        html += '<div class="artifact-row">\u25c6 ' + escapeHtml(r.test_id) +
-                ' — ' + escapeHtml(r.reason) + '</div>';
-      });
-    }
-    if (buckets.unknown.length) {
-      html += '<div class="bucket-h bucket-unknown">Unknown (' + buckets.unknown.length + ')</div>';
-      buckets.unknown.forEach(function (r) {
-        html += '<div class="artifact-row">\u26a0 ' + escapeHtml(r.test_id) +
-                ' — ' + escapeHtml(r.reason) + '</div>';
-      });
-    }
-    container.innerHTML = html;
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-})();
-
-checkBrowserSupport();
+  const b = await checkBrowserSupport();
   if (!b.ok) {
     browserWarn.textContent = 'Browser does not support Ed25519. ' + b.reason;
     browserWarn.classList.remove('ok');
@@ -480,5 +344,113 @@ const REPRO_FILES = [
 })();
 
 </script>
+
+<script>
+'use strict';
+(function () {
+  var v6Section = document.getElementById('v6-section');
+  var v6Btn = document.getElementById('v6-evaluate-btn');
+  var v6Out = document.getElementById('v6-output');
+  var fileInput = document.getElementById('file');
+  var lastManifest = null;
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  fileInput.addEventListener('change', function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) { v6Section.style.display = 'none'; lastManifest = null; return; }
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      try {
+        var m = JSON.parse(ev.target.result);
+        var witnesses = (m.artifacts || []).filter(function (a) { return a.role === 'witness'; });
+        if (witnesses.length > 0) {
+          lastManifest = m;
+          v6Section.style.display = '';
+          v6Btn.disabled = false;
+          v6Out.innerHTML = '<div class="summary-banner">' + witnesses.length + ' witness artifact(s) detected. Click "Evaluate witnesses" to evaluate each against its policy DSL.</div>';
+        } else {
+          v6Section.style.display = 'none';
+          lastManifest = null;
+        }
+      } catch (err) {
+        v6Section.style.display = 'none';
+        lastManifest = null;
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  v6Btn.addEventListener('click', function () {
+    if (!lastManifest) {
+      v6Out.innerHTML = '<div class="bucket-h bucket-fail">No manifest loaded.</div>';
+      return;
+    }
+    if (!window.ADIE_EVAL) {
+      v6Out.innerHTML = '<div class="bucket-h bucket-fail">evaluate.js not loaded.</div>';
+      return;
+    }
+    var witnesses = (lastManifest.artifacts || []).filter(function (a) { return a.role === 'witness'; });
+    var results = witnesses.map(function (a) {
+      try { return window.ADIE_EVAL.evaluateWitness(a); }
+      catch (e) { return { test_id: a.test_id, expected: a.expected_outcome, bucket: 'unknown', derived: null, match: false, reason: 'exception: ' + e.message }; }
+    });
+
+    var counts = { accept: 0, acceptPass: 0, acceptFail: 0, pregate: 0, boundary: 0, unknown: 0 };
+    results.forEach(function (r) {
+      counts[r.bucket] = (counts[r.bucket] || 0) + 1;
+      if (r.bucket === 'accept') { if (r.match) counts.acceptPass++; else counts.acceptFail++; }
+    });
+
+    var html = '<div class="summary-banner"><strong>Summary:</strong> ';
+    html += '<span class="bucket-accept" style="padding:2px 6px;border-radius:3px;">' + counts.acceptPass + ' ACCEPT pass</span> ';
+    if (counts.acceptFail > 0) html += '<span class="bucket-fail" style="padding:2px 6px;border-radius:3px;">' + counts.acceptFail + ' ACCEPT FAIL</span> ';
+    html += '<span class="bucket-pregate" style="padding:2px 6px;border-radius:3px;">' + counts.pregate + ' pre-gate</span> ';
+    html += '<span class="bucket-boundary" style="padding:2px 6px;border-radius:3px;">' + counts.boundary + ' boundary</span>';
+    if (counts.unknown > 0) html += ' <span class="bucket-unknown" style="padding:2px 6px;border-radius:3px;">' + counts.unknown + ' unknown</span>';
+    html += '</div>';
+
+    var buckets = { accept: [], pregate: [], boundary: [], unknown: [] };
+    results.forEach(function (r) { buckets[r.bucket].push(r); });
+
+    if (buckets.accept.length) {
+      html += '<div class="bucket-h bucket-accept">ACCEPT (' + buckets.accept.length + ')</div>';
+      buckets.accept.forEach(function (r) {
+        var cls = r.match ? 'pass' : 'fail';
+        var icon = r.match ? '\u2705' : '\u274c';
+        html += '<div class="artifact-row ' + cls + '">' + icon + ' ' + escapeHtml(r.test_id) +
+                ' — derived=' + escapeHtml(String(r.derived)) +
+                ' expected=' + escapeHtml(r.expected) +
+                ' (' + escapeHtml(r.reason) + ')</div>';
+      });
+    }
+    if (buckets.pregate.length) {
+      html += '<div class="bucket-h bucket-pregate">Pre-gate rejections (' + buckets.pregate.length + ') — not evaluated</div>';
+      buckets.pregate.forEach(function (r) {
+        html += '<div class="artifact-row">\u25cb ' + escapeHtml(r.test_id) + ' — ' + escapeHtml(r.reason) + '</div>';
+      });
+    }
+    if (buckets.boundary.length) {
+      html += '<div class="bucket-h bucket-boundary">Trusted boundary (' + buckets.boundary.length + ') — not evaluated</div>';
+      buckets.boundary.forEach(function (r) {
+        html += '<div class="artifact-row">\u25c6 ' + escapeHtml(r.test_id) + ' — ' + escapeHtml(r.reason) + '</div>';
+      });
+    }
+    if (buckets.unknown.length) {
+      html += '<div class="bucket-h bucket-unknown">Unknown (' + buckets.unknown.length + ')</div>';
+      buckets.unknown.forEach(function (r) {
+        html += '<div class="artifact-row">\u26a0 ' + escapeHtml(r.test_id) + ' — ' + escapeHtml(r.reason) + '</div>';
+      });
+    }
+
+    v6Out.innerHTML = html;
+  });
+})();
+</script>
+
 </body>
 </html>
