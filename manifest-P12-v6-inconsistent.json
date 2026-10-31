@@ -1,0 +1,348 @@
+{
+  "manifest_version": "1.0",
+  "run_id": "f4249356-9320-4f3f-a69f-c3d83b5b9258",
+  "claim_id": "P12",
+  "started_at": "2026-10-31T16:58:41.440280+00:00",
+  "finished_at": "2026-10-31T16:58:43.050533+00:00",
+  "duration_seconds": 1.61,
+  "outcome": "PASS",
+  "environment": {
+    "python": "3.12.3",
+    "platform": "linux",
+    "runner": "tests/runners/python/p12_runner.py"
+  },
+  "summary": {
+    "total_vectors": 13,
+    "passed": 13,
+    "failed": 0
+  },
+  "artifacts": [
+    {
+      "path": "output/reports/p12/P12_GateReport_interval.json",
+      "sha256": "f80ecd28a2a124dfd3493f869a58f2ce00b895ff92f8206b3886e1a5753bd177",
+      "role": "gate_report"
+    },
+    {
+      "path": "output/reports/p12/witnesses/P12-001.json",
+      "sha256": "8d06dbb8df627fde9b1ec554a4f4e85f62f9176e2a66bae39af2a92f1bb791da",
+      "role": "witness",
+      "test_id": "P12-001",
+      "schema_version": "1.0",
+      "policy_dsl": "RULE isolate_ip IF risk_score > 0.90 AND NOT is_critical_infra;",
+      "safety_invariants": [
+        "cannot_isolate_domain_controller"
+      ],
+      "expected_outcome": "ACCEPT",
+      "witness_data": {
+        "backend": "test-fixture",
+        "backend_version": "1.0.0",
+        "source": "test-fixture",
+        "completeness": "full",
+        "assignment": {
+          "risk_score": {
+            "sort": "Real",
+            "value": "1/10"
+          },
+          "is_critical_infra": {
+            "sort": "Bool",
+            "value": false
+          },
+          "rule.action": {
+            "sort": "String",
+            "value": "isolate_subnet"
+          },
+          "rule.name": {
+            "sort": "String",
+            "value": "isolate_ip"
+          }
+        }
+      }
+    },
+    {
+      "path": "output/reports/p12/witnesses/P12-002.json",
+      "sha256": "8221a8b05ff2943dc3ce9fcb9e21954abad35dae7c3a38fc93449dac5ed2a43f",
+      "role": "witness",
+      "test_id": "P12-002",
+      "schema_version": "1.0",
+      "policy_dsl": "RULE revoke_token IF auth_failures > 5 AND threat_score >= 0.85;",
+      "safety_invariants": [
+        "cannot_revoke_root_authority"
+      ],
+      "expected_outcome": "ACCEPT",
+      "witness_data": {
+        "backend": "test-fixture",
+        "backend_version": "1.0.0",
+        "source": "test-fixture",
+        "completeness": "full",
+        "assignment": {
+          "auth_failures": {
+            "sort": "Real",
+            "value": "6"
+          },
+          "threat_score": {
+            "sort": "Real",
+            "value": "17/20"
+          },
+          "rule.action": {
+            "sort": "String",
+            "value": "revoke_token"
+          },
+          "rule.name": {
+            "sort": "String",
+            "value": "revoke_token"
+          }
+        }
+      }
+    },
+    {
+      "path": "output/reports/p12/witnesses/P12-N01.json",
+      "sha256": "c43fbfdd58cfbbc4e974ca355df4e16e97e4a3cb316d5e809d9c5d158e06e8b0",
+      "role": "witness",
+      "test_id": "P12-N01",
+      "schema_version": "1.0",
+      "policy_dsl": "INVALID_RULE isolate_ip >>> UNKNOWN_SYNTAX",
+      "safety_invariants": [],
+      "expected_outcome": "REJECT_INVALID",
+      "witness_data": {
+        "backend": "test-fixture",
+        "backend_version": "1.0.0",
+        "source": "test-fixture",
+        "completeness": "full",
+        "assignment": {}
+      }
+    },
+    {
+      "path": "output/reports/p12/witnesses/P12-N02.json",
+      "sha256": "d1fd40f2a5834eb97d528e81330def6478638e5ef43dc87bde55eef1700b6575",
+      "role": "witness",
+      "test_id": "P12-N02",
+      "schema_version": "1.0",
+      "policy_dsl": "RULE isolate_ip IF True ACTION isolate_domain_controller;",
+      "safety_invariants": [
+        "cannot_isolate_domain_controller"
+      ],
+      "expected_outcome": "REJECT_POLICY",
+      "witness_data": {
+        "backend": "test-fixture",
+        "backend_version": "1.0.0",
+        "source": "test-fixture",
+        "completeness": "full",
+        "assignment": {
+          "rule.action": {
+            "sort": "String",
+            "value": "isolate_domain_controller"
+          },
+          "rule.name": {
+            "sort": "String",
+            "value": "isolate_ip"
+          }
+        }
+      }
+    },
+    {
+      "path": "output/reports/p12/witnesses/P12-N03.json",
+      "sha256": "ae31ad684685db0a2b81ad94e7542a2db2ed55e1ebaa6b1ac37967d11463daff",
+      "role": "witness",
+      "test_id": "P12-N03",
+      "schema_version": "1.0",
+      "policy_dsl": "RULE test IF risk_score > 0.9 AND risk_score < 0.1;",
+      "safety_invariants": [],
+      "expected_outcome": "REJECT_POLICY",
+      "witness_data": {
+        "backend": "test-fixture",
+        "backend_version": "1.0.0",
+        "source": "test-fixture",
+        "completeness": "full",
+        "assignment": {
+          "risk_score": {
+            "sort": "Real",
+            "value": "1"
+          }
+        }
+      }
+    },
+    {
+      "path": "output/reports/p12/witnesses/P12-N04.json",
+      "sha256": "a9e32c61ce50619e5f980bd09ac2e16657c068f00aa8d648550c21efe11b1887",
+      "role": "witness",
+      "test_id": "P12-N04",
+      "schema_version": "1.0",
+      "policy_dsl": "RULE complex_non_linear IF risk_a > risk_b OR risk_c < 0.1;",
+      "safety_invariants": [],
+      "expected_outcome": "ACCEPT",
+      "witness_data": {
+        "backend": "test-fixture",
+        "backend_version": "1.0.0",
+        "source": "test-fixture",
+        "completeness": "full",
+        "assignment": {
+          "risk_a": {
+            "sort": "Real",
+            "value": "1"
+          },
+          "risk_b": {
+            "sort": "Real",
+            "value": "0"
+          },
+          "risk_c": {
+            "sort": "Real",
+            "value": "1/2"
+          }
+        }
+      }
+    },
+    {
+      "path": "output/reports/p12/witnesses/P12-N05.json",
+      "sha256": "03eea0f6f4482cf3e9115ef0b536a1412ec6cd3a98a8d433163f983955ff235d",
+      "role": "witness",
+      "test_id": "P12-N05",
+      "schema_version": "1.0",
+      "policy_dsl": "RULE hard_sat IF deeply_nested_expression;",
+      "safety_invariants": [],
+      "expected_outcome": "REJECT_UNPROVABLE",
+      "witness_data": {
+        "backend": "test-fixture",
+        "backend_version": "1.0.0",
+        "source": "test-fixture",
+        "completeness": "full",
+        "assignment": {
+          "deeply_nested_expression": {
+            "sort": "Bool",
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "path": "output/reports/p12/witnesses/P12-N05R.json",
+      "sha256": "16071c95aa38de63dcf58e805a5835d7ecfb1bb7c6e1255b07265a616112aa16",
+      "role": "witness",
+      "test_id": "P12-N05R",
+      "schema_version": "1.0",
+      "policy_dsl": "RULE real_timeout_probe IF risk_score > 0.5;",
+      "safety_invariants": [],
+      "expected_outcome": "REJECT_UNPROVABLE",
+      "witness_data": {
+        "backend": "test-fixture",
+        "backend_version": "1.0.0",
+        "source": "test-fixture",
+        "completeness": "full",
+        "assignment": {
+          "risk_score": {
+            "sort": "Real",
+            "value": "1"
+          }
+        }
+      }
+    },
+    {
+      "path": "output/reports/p12/witnesses/P12-N06.json",
+      "sha256": "699c6509101ed541cf0087bee75c5f69467f9d7b8dd46aa34f841f3eafdb4e4c",
+      "role": "witness",
+      "test_id": "P12-N06",
+      "schema_version": "1.0",
+      "policy_dsl": "RULE test IF a > b;",
+      "safety_invariants": [],
+      "expected_outcome": "REJECT_INVALID",
+      "witness_data": {
+        "backend": "test-fixture",
+        "backend_version": "1.0.0",
+        "source": "test-fixture",
+        "completeness": "full",
+        "assignment": {
+          "a": {
+            "sort": "Real",
+            "value": "1"
+          },
+          "b": {
+            "sort": "Real",
+            "value": "0"
+          }
+        }
+      }
+    },
+    {
+      "path": "output/reports/p12/witnesses/P12-N07.json",
+      "sha256": "3709037b7c9226a4ca51ac8b31f62e4a6e53d9edd96ee1fe4d744966b9c8b1b0",
+      "role": "witness",
+      "test_id": "P12-N07",
+      "schema_version": "1.0",
+      "policy_dsl": "",
+      "safety_invariants": [],
+      "expected_outcome": "REJECT_INVALID",
+      "witness_data": {
+        "backend": "test-fixture",
+        "backend_version": "1.0.0",
+        "source": "test-fixture",
+        "completeness": "full",
+        "assignment": {}
+      }
+    },
+    {
+      "path": "output/reports/p12/witnesses/P12-N08.json",
+      "sha256": "5993d7722cae58a86adb95838c6a1ca16e8217cac2bb9c7302730852e7543550",
+      "role": "witness",
+      "test_id": "P12-N08",
+      "schema_version": "1.0",
+      "policy_dsl": "RULE test IF risk > 0.5;",
+      "safety_invariants": [],
+      "expected_outcome": "REJECT_BINDING",
+      "witness_data": {
+        "backend": "test-fixture",
+        "backend_version": "1.0.0",
+        "source": "test-fixture",
+        "completeness": "full",
+        "assignment": {
+          "risk": {
+            "sort": "Real",
+            "value": "1"
+          }
+        }
+      }
+    },
+    {
+      "path": "output/reports/p12/witnesses/P12-N09.json",
+      "sha256": "84f78675f449d9deaa3a07b99244547cc41a222b0e8eb458fc639b8ee09b8e9b",
+      "role": "witness",
+      "test_id": "P12-N09",
+      "schema_version": "1.0",
+      "policy_dsl": "",
+      "safety_invariants": [],
+      "expected_outcome": "REJECT_BINDING",
+      "witness_data": {
+        "backend": "test-fixture",
+        "backend_version": "1.0.0",
+        "source": "test-fixture",
+        "completeness": "full",
+        "assignment": {}
+      }
+    },
+    {
+      "path": "output/reports/p12/witnesses/P12-N10.json",
+      "sha256": "2cde09b0de2008c893cd207478fd40e73895461d34ad5babe760e9eb7ca8ce01",
+      "role": "witness",
+      "test_id": "P12-N10",
+      "schema_version": "1.0",
+      "policy_dsl": "RULE test IF true;",
+      "safety_invariants": [],
+      "expected_outcome": "REJECT_INVALID",
+      "witness_data": {
+        "backend": "test-fixture",
+        "backend_version": "1.0.0",
+        "source": "test-fixture",
+        "completeness": "full",
+        "assignment": {}
+      }
+    }
+  ],
+  "full_evidence": true,
+  "signature": {
+    "alg": "Ed25519",
+    "key_id": "28f7e99132838f7a",
+    "signed_payload_sha256": "115e14cb2c9e9d22be862bb42d54a72deb4f3a52703c8a31662d6608b000ea64",
+    "value": "5bwL+wf4npyMDXlKB4xxM4ABOUTLoK98qwC/8+0yPGol9Krj7oWViP/h7jqFYmRF7WqfVUCWezjWR/otctZ1Dg==",
+    "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAte5ywFv1OXuUOFIzf4GbuuqMA6q7pZ3ERSCT1+olHJc=\n-----END PUBLIC KEY-----\n",
+    "signed_at": "2026-10-31T18:15:54.422149+00:00",
+    "dev_mode": true
+  }
+}
