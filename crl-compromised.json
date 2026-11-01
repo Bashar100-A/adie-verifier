@@ -1,0 +1,11 @@
+{
+  "crl_version": "1.0",
+  "generated_at": "2026-11-01T00:00:00Z",
+  "source_status": "test-fixture",
+  "revoked": [
+    {"key_id": "28f7e99132838f7a",
+     "revoked_at": "2026-10-20T00:00:00Z",
+     "compromised_at": "2026-10-18T00:00:00Z",
+     "reason": "test: compromised before signing, revoked after"}
+  ]
+}
