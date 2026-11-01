@@ -58,12 +58,20 @@
 </div>
 
 <div class="row">
+  <label>2. CRL file (optional, revocation list)</label>
+  <input type="file" id="crl" accept=".json,application/json">
+  <div id="crl-info" class="diag"></div>
+</div>
+
+<div class="row">
   <button id="verify-btn" disabled>Verify manifest</button>
 </div>
 
 <div class="row">
   <button id="reproduce-btn" disabled>Load all 3 manifests and verify</button>
 </div>
+
+<script src="crl-check.js"></script>
 
 <div id="output"></div>
 
@@ -223,6 +231,27 @@ async function checkBrowserSupport() {
 
 const fileInput = document.getElementById('file');
 const verifyBtn = document.getElementById('verify-btn');
+const crlInput = document.getElementById('crl');
+const crlInfoEl = document.getElementById('crl-info');
+let currentCRL = null;
+
+if (crlInput) {
+  crlInput.addEventListener('change', async (e) => {
+    const cf = e.target.files[0];
+    if (!cf) {
+      currentCRL = null;
+      if (crlInfoEl) crlInfoEl.textContent = '';
+      return;
+    }
+    try {
+      currentCRL = JSON.parse(await cf.text());
+      if (crlInfoEl) crlInfoEl.innerHTML = 'Loaded CRL: <code>' + cf.name + '</code>';
+    } catch (ex) {
+      currentCRL = null;
+      if (crlInfoEl) crlInfoEl.innerHTML = '<span class="bad">CRL parse error: ' + ex.message + '</span>';
+    }
+  });
+}
 const outputEl = document.getElementById('output');
 const fileInfoEl = document.getElementById('file-info');
 const browserWarn = document.getElementById('browser-warn');
@@ -248,6 +277,21 @@ verifyBtn.addEventListener('click', async () => {
   let m = {};
   try { m = JSON.parse(text); } catch (_) {}
 
+  if (result.ok && currentCRL && window.ADIE_CRL && m.signature) {
+    try {
+      const crlResult = window.ADIE_CRL.checkCRL(m, currentCRL);
+      if (crlResult.status === 'REVOKED' || crlResult.status === 'SIGNED_AFTER_COMPROMISE') {
+        result = { ok: false, reason: 'CRL_' + crlResult.status, detail: crlResult.reason };
+      } else if (crlResult.status === 'SIGNED_BEFORE_COMPROMISE') {
+        result.crlWarning = crlResult.status + ': ' + crlResult.reason;
+      } else {
+        result.crlStatus = crlResult.status;
+      }
+    } catch (ex) {
+      result.crlWarning = 'CRL check error: ' + ex.message;
+    }
+  }
+
   const cls = result.ok ? 'valid' : 'invalid';
   const status = result.ok ? 'VALID' : 'INVALID';
   const rows = [
@@ -261,6 +305,7 @@ verifyBtn.addEventListener('click', async () => {
     ['signed_at', (m.signature && m.signature.signed_at) || '-'],
     ['key_id', (m.signature && m.signature.key_id) || '-'],
     ['dev_mode', (m.signature && m.signature.dev_mode) ? '<span class="k">true (warning only)</span>' : 'false'],
+    ['crl', result.crlWarning ? '<span class="bad">' + result.crlWarning + '</span>' : (result.crlStatus || '-')],
   ];
   const tableRows = rows.map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('');
   outputEl.innerHTML = '<pre class="' + cls + '">' + status + ' - ' + result.reason + '</pre>' +
