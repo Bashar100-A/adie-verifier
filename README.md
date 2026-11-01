@@ -91,6 +91,38 @@ Both are rejected by v5. The pinning check (`TRUSTED_KEY_IDS`) fires
 before hash and signature verification, so a correctly-signed manifest
 from an unknown key is rejected outright.
 
+## CRL verification (optional)
+
+v5 accepts an optional third file: a CRL (revocation list) matching
+the schema in Core's `schemas/crl-v1.json`. When provided, the
+verifier consults `crl-check.js` after signature verification. When
+absent, behavior is identical to prior v5 (backward compatible).
+
+Outcomes:
+
+| Manifest signed | CRL entry | Result |
+|---|---|---|
+| any | no CRL loaded | VALID (unchanged) |
+| any | key_id not in revoked[] | VALID |
+| >= revoked_at | revoked | INVALID: CRL_REVOKED |
+| >= compromised_at, < revoked_at | compromised | INVALID: CRL_SIGNED_AFTER_COMPROMISE |
+| < compromised_at (compromised_at null => revoked_at) | compromised | VALID + warning row |
+
+Sample fixtures in this repo:
+- `crl-revoked.json` - revoked_at before current manifests (expect INVALID)
+- `crl-future.json` - revoked_at in 2030 (expect VALID + warning)
+- `crl-compromised.json` - compromised 2026-10-18, revoked 2026-10-20 (expect warning)
+
+Manual browser steps:
+1. Open `index-v5.html`
+2. Load `manifest-P12.json` with no CRL -> VALID (unchanged)
+3. Load `manifest-P12.json` + `crl-revoked.json` -> INVALID
+4. Load `manifest-P12.json` + `crl-future.json` -> VALID + warning
+5. Load `manifest-P12.json` + `crl-compromised.json` -> VALID + warning
+
+Known limitation: browser-level automated test for the CRL gate is
+not yet wired (tracked in SESSION-2026-11-01 continuation as debt).
+
 ## Technical details
 
 - **Signature:** Ed25519 over a payload `{claim_id, outcome, files[], run_id, signed_at}`
