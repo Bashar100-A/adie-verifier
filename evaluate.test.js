@@ -128,6 +128,39 @@ assertEq(E.classifyBucket('SOMETHING', null), 'unknown', 'bucket unknown');
   assertEq(r.match, true, 'OR: match');
 })();
 
+// ---------- M0-6: manifest with failure_class (end-to-end) ----------
+(function () {
+  var fs = require('fs');
+  var path = require('path');
+  var mf = path.join(__dirname, 'manifest-P12-v6-m0-6.json');
+  var m = JSON.parse(fs.readFileSync(mf, 'utf8'));
+  var ws = m.artifacts.filter(function (a) { return a.role === 'witness'; });
+  assertEq(ws.length, 13, 'm0-6: witness_count');
+  var byId = {};
+  ws.forEach(function (w) { byId[w.test_id] = w; });
+  assertEq(byId['P12-001'].failure_class, null, 'm0-6: P12-001 fc=null');
+  assertEq(byId['P12-N03'].failure_class, 'SMT_UNSATISFIABLE', 'm0-6: N03 fc');
+  assertEq(byId['P12-N05'].failure_class, 'SOLVER_TIMEOUT', 'm0-6: N05 fc');
+  assertEq(byId['P12-N05R'].failure_class, 'SOLVER_TIMEOUT', 'm0-6: N05R fc');
+  var rP001 = E.evaluateWitness(byId['P12-001']);
+  var rN03 = E.evaluateWitness(byId['P12-N03']);
+  var rN05 = E.evaluateWitness(byId['P12-N05']);
+  var rN05R = E.evaluateWitness(byId['P12-N05R']);
+  assertEq(rP001.bucket, 'accept', 'm0-6: P12-001 bucket');
+  assertEq(rN03.bucket, 'boundary', 'm0-6: N03 bucket');
+  assertEq(rN05.bucket, 'boundary', 'm0-6: N05 bucket');
+  assertEq(rN05R.bucket, 'boundary', 'm0-6: N05R bucket');
+  var counts = { accept: 0, pregate: 0, boundary: 0, unknown: 0 };
+  ws.forEach(function (w) {
+    var b = E.evaluateWitness(w).bucket;
+    if (b in counts) counts[b]++;
+  });
+  assertEq(counts.accept, 3, 'm0-6: counts.accept');
+  assertEq(counts.pregate, 7, 'm0-6: counts.pregate');
+  assertEq(counts.boundary, 3, 'm0-6: counts.boundary');
+  assertEq(counts.unknown, 0, 'm0-6: counts.unknown');
+})();
+
 // ---------- Report ----------
 console.log('---');
 console.log('PASS: ' + pass + ' | FAIL: ' + fail);
