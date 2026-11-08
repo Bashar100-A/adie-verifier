@@ -174,22 +174,30 @@
   }
 
   // ---------- Invariant map ----------
-  var INVARIANTS = {
+  // Legacy INVARIANTS map, retained for export compatibility (line 272).
+  // NOT consulted by checkInvariants (strip-pattern below).
+  var INVARIANTS = Object.freeze({
     cannot_isolate_domain_controller: { forbidden: 'isolate_domain_controller' },
     cannot_revoke_root_authority: { forbidden: 'revoke_root_authority' }
-  };
+  });
+  // Strip-pattern (mirrors Python kernel._explicit_forbidden and
+  // independent_checker._explicit_forbidden):
+  //   cannot_<action>  forbids the rule from taking action <action>.
+  //   Names without the "cannot_" prefix fail closed (unknown => !ok).
   function checkInvariants(effAction, names, asg) {
     for (var i = 0; i < names.length; i++) {
       var name = names[i];
-      var spec = INVARIANTS[name];
-      if (!spec) return { ok: false, unknown: true, reason: "unknown invariant '" + name + "'" };
+      if (typeof name !== 'string' || name.indexOf('cannot_') !== 0) {
+        return { ok: false, unknown: true, reason: "unknown invariant '" + name + "' (expected prefix 'cannot_')" };
+      }
+      var forbidden = name.slice('cannot_'.length);
       // Fast-path: DSL declared action (mirrors kernel _explicit_forbidden).
-      if (effAction && spec.forbidden === effAction) {
+      if (effAction && forbidden === effAction) {
         return { ok: false, reason: "DSL action '" + effAction + "' forbidden by '" + name + "'" };
       }
       // Semantic: witness rule.action (what the rule actually does).
-      if (asg && asg['rule.action'] && asg['rule.action'].value === spec.forbidden) {
-        return { ok: false, reason: "witness rule.action '" + spec.forbidden + "' forbidden by '" + name + "'" };
+      if (asg && asg['rule.action'] && asg['rule.action'].value === forbidden) {
+        return { ok: false, reason: "witness rule.action '" + forbidden + "' forbidden by '" + name + "'" };
       }
     }
     return { ok: true };

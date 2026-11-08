@@ -161,6 +161,62 @@ assertEq(E.classifyBucket('SOMETHING', null), 'unknown', 'bucket unknown');
   assertEq(counts.unknown, 0, 'm0-6: counts.unknown');
 })();
 
+// ---------- S20: strip-pattern invariants (4 new names) ----------
+// Mirrors Python kernel._explicit_forbidden: cannot_<X> forbids action <X>.
+(function () {
+  function s20Pos(invName) {
+    var a = baseArtifact({
+      safety_invariants: [invName],
+      witness_data: { assignment: {
+        risk_score: { sort: 'Real', value: '19/10' },
+        is_critical_infra: { sort: 'Bool', value: false },
+        'rule.action': { sort: 'String', value: 'safe_action' },
+        'rule.name': { sort: 'String', value: 'isolate_ip' }
+      } }
+    });
+    var r = E.evaluateWitness(a);
+    assertEq(r.derived, 'ACCEPT', 'S20 positive: ' + invName);
+    assertEq(r.match, true, 'S20 positive match: ' + invName);
+  }
+  function s20Neg(invName, forbiddenAction) {
+    var a = baseArtifact({
+      safety_invariants: [invName],
+      witness_data: { assignment: {
+        risk_score: { sort: 'Real', value: '19/10' },
+        is_critical_infra: { sort: 'Bool', value: false },
+        'rule.action': { sort: 'String', value: forbiddenAction },
+        'rule.name': { sort: 'String', value: 'isolate_ip' }
+      } }
+    });
+    var r = E.evaluateWitness(a);
+    assertEq(r.derived, 'REJECT_POLICY', 'S20 negative: ' + invName);
+    assertEq(r.match, false, 'S20 negative match: ' + invName);
+  }
+
+  s20Pos('cannot_block_service_account');
+  s20Pos('cannot_delete_backup');
+  s20Pos('cannot_escalate_to_root');
+  s20Pos('cannot_escalate_to_system');
+  s20Neg('cannot_block_service_account', 'block_service_account');
+  s20Neg('cannot_delete_backup', 'delete_backup');
+  s20Neg('cannot_escalate_to_root', 'escalate_to_root');
+  s20Neg('cannot_escalate_to_system', 'escalate_to_system');
+
+  // S20 negative control: unknown invariant (no "cannot_" prefix) fails closed.
+  var aU = baseArtifact({
+    safety_invariants: ['unknown_invariant'],
+    witness_data: { assignment: {
+      risk_score: { sort: 'Real', value: '19/10' },
+      is_critical_infra: { sort: 'Bool', value: false },
+      'rule.action': { sort: 'String', value: 'safe_action' },
+      'rule.name': { sort: 'String', value: 'isolate_ip' }
+    } }
+  });
+  var rU = E.evaluateWitness(aU);
+  assertEq(rU.derived, 'REJECT_POLICY', 'S20 negative-control: unknown_invariant fails closed');
+  assertEq(rU.match, false, 'S20 negative-control: match false');
+})();
+
 // ---------- Report ----------
 console.log('---');
 console.log('PASS: ' + pass + ' | FAIL: ' + fail);
