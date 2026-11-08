@@ -144,6 +144,9 @@ function jcsCanonicalize(v) {
   if (t === 'boolean') return v ? 'true' : 'false';
   if (t === 'number') {
     if (!Number.isFinite(v)) throw new Error('non-finite number');
+    if (Number.isInteger(v) && !Number.isSafeInteger(v)) {
+      throw new Error('integer outside safe domain');
+    }
     if (Object.is(v, -0)) return '0';
     return v.toString();
   }
