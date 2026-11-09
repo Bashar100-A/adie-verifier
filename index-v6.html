@@ -138,6 +138,42 @@ async function computeKeyIdFromPem(pem) {
 function fail(reason, detail) { return { ok: false, reason, detail: detail || '' }; }
 function pass(detail) { return { ok: true, reason: 'VALID', detail: detail || '' }; }
 
+function validateNumericProfile(text) {
+  // ADIE Numeric Profile (DEC-012 + Directive-020): reject decimal/exponent
+  // number tokens and integers outside +/- (2^53 - 1). Raw text inspection
+  // before JSON.parse (JSON.parse loses 1.0 vs 1). String contents skipped.
+  var i = 0, n = text.length, inString = false, escape = false;
+  while (i < n) {
+    var c = text[i];
+    if (inString) {
+      if (escape) { escape = false; i++; continue; }
+      if (c === '\\') { escape = true; i++; continue; }
+      if (c === '"') { inString = false; i++; continue; }
+      i++; continue;
+    }
+    if (c === '"') { inString = true; i++; continue; }
+    if (c === '-' || (c >= '0' && c <= '9')) {
+      var start = i, j = i;
+      if (c === '-') j++;
+      if (j >= n || text[j] < '0' || text[j] > '9') { i++; continue; }
+      while (j < n && text[j] >= '0' && text[j] <= '9') j++;
+      if (j < n && (text[j] === '.' || text[j] === 'e' || text[j] === 'E')) {
+        var k = j;
+        while (k < n && (text[k] === '.' || text[k] === 'e' || text[k] === 'E' ||
+                         text[k] === '+' || text[k] === '-' ||
+                         (text[k] >= '0' && text[k] <= '9'))) k++;
+        throw new Error('ADIE Numeric Profile: decimal/exponent number token: "' + text.slice(start, k) + '"');
+      }
+      var intVal = Number(text.slice(start, j));
+      if (!Number.isSafeInteger(intVal)) {
+        throw new Error('ADIE Numeric Profile: integer outside safe domain: ' + text.slice(start, j));
+      }
+      i = j; continue;
+    }
+    i++;
+  }
+}
+
 function jcsCanonicalize(v) {
   if (v === null) return 'null';
   const t = typeof v;
@@ -178,7 +214,7 @@ function jcsCanonicalize(v) {
 
 async function verifyManifest(text) {
   let m;
-  try { m = JSON.parse(text); }
+  try { validateNumericProfile(text); m = JSON.parse(text); }
   catch (e) { return fail('MALFORMED_JSON', e.message); }
 
   if (!m || typeof m !== 'object') return fail('MALFORMED_JSON', 'not an object');
