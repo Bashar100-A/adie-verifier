@@ -21,12 +21,14 @@
     "detail_contains": "unsafe integer"
   },
   {
-    "name": "A06-exponent-number",
-    "expected_code": "UNSUPPORTED_MANIFEST_VERSION"
+    "name": "A06-tiny-file-no-version",
+    "expected_code": "UNSUPPORTED_MANIFEST_VERSION",
+    "note": "tiny file without manifest_version \u2192 UNSUPPORTED_MANIFEST_VERSION. Real Numeric Profile test deferred to A24/A25 in S32."
   },
   {
-    "name": "A07-decimal-number",
-    "expected_code": "UNSUPPORTED_MANIFEST_VERSION"
+    "name": "A07-tiny-file-no-version",
+    "expected_code": "UNSUPPORTED_MANIFEST_VERSION",
+    "note": "tiny file without manifest_version \u2192 UNSUPPORTED_MANIFEST_VERSION. Real Numeric Profile test deferred to A24/A25 in S32."
   },
   {
     "name": "A08-unsupported-version",
@@ -81,8 +83,9 @@
     "expected_code": "PAYLOAD_HASH_MISMATCH"
   },
   {
-    "name": "A21-float-in-witness",
-    "expected_code": "PAYLOAD_HASH_MISMATCH"
+    "name": "A21-witness-tampered-hash",
+    "expected_code": "PAYLOAD_HASH_MISMATCH",
+    "note": "tests signature tampering (hash mismatch), not float policy. Real float-in-witness test deferred to A24 in S32."
   },
   {
     "name": "A22-unsafe-deep",
