@@ -212,9 +212,35 @@ function jcsCanonicalize(v) {
   throw new Error('unsupported type: ' + t);
 }
 
+// S32 security fix: post-parse safe-integer enforcement.
+// Rationale: signature (JCS + SHA-256 + Ed25519) covers byte integrity
+// of the full manifest. The Numeric Profile lexical validator remains
+// available (window.validateNumericProfile) for witness-data evaluation
+// where 1.0 vs 1 matters; the envelope only needs to reject integers
+// outside the safe range (JCS distinguishes these across runtimes).
+function rejectUnsafeIntegers(obj, path) {
+  path = path || '';
+  if (obj === null || typeof obj !== 'object') {
+    if (typeof obj === 'number' && Number.isInteger(obj) && !Number.isSafeInteger(obj)) {
+      throw new Error('manifest: unsafe integer at ' + (path || '<root>'));
+    }
+    return;
+  }
+  var keys = Array.isArray(obj) ? obj.map(function(_, i) { return String(i); }) : Object.keys(obj);
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    var v = obj[k];
+    var p = path ? path + '.' + k : k;
+    if (typeof v === 'number' && Number.isInteger(v) && !Number.isSafeInteger(v)) {
+      throw new Error('manifest: unsafe integer at ' + p);
+    }
+    if (v && typeof v === 'object') rejectUnsafeIntegers(v, p);
+  }
+}
+
 async function verifyManifest(text) {
   let m;
-  try { validateNumericProfile(text); m = JSON.parse(text); }
+  try { m = JSON.parse(text); rejectUnsafeIntegers(m); }
   catch (e) { return fail('MALFORMED_JSON', e.message); }
 
   if (!m || typeof m !== 'object') return fail('MALFORMED_JSON', 'not an object');

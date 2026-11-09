@@ -1,0 +1,96 @@
+[
+  {
+    "name": "A01-payload-byte-flip",
+    "expected_code": "PAYLOAD_HASH_MISMATCH"
+  },
+  {
+    "name": "A02-wrong-key-id",
+    "expected_code": "KEY_ID_MISMATCH"
+  },
+  {
+    "name": "A03-attacker-key",
+    "expected_code": "UNTRUSTED_KEY"
+  },
+  {
+    "name": "A04-tampered-signature",
+    "expected_code": "SIGNATURE_INVALID"
+  },
+  {
+    "name": "A05-unsafe-integer",
+    "expected_code": "MALFORMED_JSON",
+    "detail_contains": "unsafe integer"
+  },
+  {
+    "name": "A06-exponent-number",
+    "expected_code": "UNSUPPORTED_MANIFEST_VERSION"
+  },
+  {
+    "name": "A07-decimal-number",
+    "expected_code": "UNSUPPORTED_MANIFEST_VERSION"
+  },
+  {
+    "name": "A08-unsupported-version",
+    "expected_code": "UNSUPPORTED_MANIFEST_VERSION"
+  },
+  {
+    "name": "A09-unsupported-alg",
+    "expected_code": "UNSUPPORTED_ALG"
+  },
+  {
+    "name": "A10-no-signature",
+    "expected_code": "MISSING_SIGNATURE"
+  },
+  {
+    "name": "A11-missing-key-id",
+    "expected_code": "MISSING_SIGNATURE"
+  },
+  {
+    "name": "A12-missing-value",
+    "expected_code": "MISSING_SIGNATURE"
+  },
+  {
+    "name": "A13-missing-payload-sha",
+    "expected_code": "MISSING_SIGNATURE"
+  },
+  {
+    "name": "A14-invalid-pem",
+    "expected_code": "KEY_ID_MISMATCH"
+  },
+  {
+    "name": "A15-invalid-base64",
+    "expected_code": "CRYPTO_ERROR"
+  },
+  {
+    "name": "A16-empty-file",
+    "expected_code": "MALFORMED_JSON"
+  },
+  {
+    "name": "A17-non-object",
+    "expected_code": "MALFORMED_JSON"
+  },
+  {
+    "name": "A18-no-manifest-version",
+    "expected_code": "UNSUPPORTED_MANIFEST_VERSION"
+  },
+  {
+    "name": "A19-reordered-keys",
+    "expected_code": "VALID"
+  },
+  {
+    "name": "A20-extra-field",
+    "expected_code": "PAYLOAD_HASH_MISMATCH"
+  },
+  {
+    "name": "A21-float-in-witness",
+    "expected_code": "PAYLOAD_HASH_MISMATCH"
+  },
+  {
+    "name": "A22-unsafe-deep",
+    "expected_code": "MALFORMED_JSON",
+    "detail_contains": "unsafe integer"
+  },
+  {
+    "name": "A23-safe-boundary",
+    "expected_code": "PAYLOAD_HASH_MISMATCH"
+  }
+]
